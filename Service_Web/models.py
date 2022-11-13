@@ -1,4 +1,4 @@
-from .app import app,api
+from .app import app, api
 from flask_restx import fields
 
 get_allcategories = api.model('retourgetallcategories',{'intitule':fields.String(exemple='Action'),'location':fields.Url(exemple='/categorieFilm/1')})
@@ -26,3 +26,9 @@ filmget = api.model('filmget',
                     'durée':fields.String(exemple='2h15'),
                     'resume_film':fields.String(exemple='Un film incroyable'),
                     'age_min':fields.Integer(exemple=12)})
+
+add_client = api.model('clientpost', {
+                                    'nom_client':fields.String(exemple='Dupond'),
+                                     "prenom":fields.String(exemple='Dupond'), 
+                                     "email":fields.String(exemple='truc@truc.fr'), 
+                                     "age":fields.Integer(exemple=49)})

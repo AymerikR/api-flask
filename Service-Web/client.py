@@ -1,5 +1,79 @@
 from video import *
 
+"""
+connection = sqlite3.connect("video1.db")
+cursor = connection.cursor()
+
+id_film=7
+intid=2
+
+cursor.execute("SELECT film.age_min FROM film WHERE film.id_film= ?", id_film)
+age_min= cursor.fetchone()
+
+cursor.execute('SELECT client.age from client WHERE client.id_client = ?', intid)
+age_client=cursor.fetchone()
+
+if age_client>=age_min:
+    film_client = (id_film,intid)
+    cursor.execute('INSERT INTO film_client VALUES (?,?)',film_client)
+                
+
+connection.commit()
+
+
+id = (1,)
+
+cursor.execute('SELECT * FROM categorie WHERE id_categorie = ?',id)
+req = cursor.fetchone()
+categorie = {
+    'intitule':req[1],
+    'description':req[2]
+}
+
+
+cursor.execute('SELECT id_categorie FROM categorie ')
+req = cursor.fetchall()
+print(req)
+
+test = ('Du suspence tout le temps tout le temps',5)
+
+cursor.execute("UPDATE categorie SET description_categorie = ? WHERE id_categorie = ? ",test)
+connection.commit()
+
+
+sql = '''SELECT film.id_film,film.titre_film FROM film
+                JOIN film_categorie
+                ON film.id_film = film_categorie.film_id
+                JOIN categorie
+                ON film_categorie.categorie_id = categorie.id_categorie
+                WHERE categorie.id_categorie = ?
+                
+                '''
+cursor.execute(sql,id)
+print(cursor.fetchall())
+
+cursor.execute("SELECT film.id_film FROM film")
+id = len(cursor.fetchall())+1
+
+print(f'cursor.lastrowid1 = {cursor.lastrowid}')
+new_film = (id,'Titanic 2',
+            'Leonardo Dicaprio',
+            '2008',
+            '3h15',
+            'Un gros bateau qui coule 2 fois',
+            10)
+
+cursor.execute('INSERT INTO film VALUES(?,?,?,?,?,?,?)',new_film)
+print(f'cursor.lastrowid = {cursor.lastrowid}')
+film_cat = (id,4)
+cursor.execute('INSERT INTO film_categorie VALUES (?,?)',film_cat)
+
+connection.commit()
+
+connection.close()
+"""
+
+
 
 clientpost = api.model('clientpost',{'nom':fields.String(exemple='Lalis'),
                         'prenom':fields.String(exemple='William'),
@@ -10,15 +84,18 @@ clientget = api.model('clientget',{'id':fields.Integer(exemple=1),
                         'prenom':fields.String(exemple='William'),
                         'email':fields.String(exemple='wi@hotmail.fr'),
                         'age':fields.Integer(exemple='23')})
-
+film_clientpost= api.model('film_clientpost',{'idFilm':fields.Integer(exemple=1)})
 
 @api.route('/clients/<idclient>')
 class ClientId(Resource):
     @api.doc(model = clientget)
     def get(self,idclient):
         """
+        
         Retourne le détail d'un client
+        
         """
+        
         connection = sqlite3.connect('video1.db')
         cursor = connection.cursor()
         cursor.execute('SELECT id_client FROM client ')
@@ -118,6 +195,8 @@ class ClientId(Resource):
             connection.close()
             return()
 
+
+
 @api.route('/clients/<idclient>/film')
 class ClientFilmAll(Resource):
     api.doc(model=get_allfilm)
@@ -131,22 +210,15 @@ class ClientFilmAll(Resource):
             connection = sqlite3.connect('video1.db')
             cursor = connection.cursor()
             id = (int(idclient),)
-            sql = """SELECT film.id_film,film.titre_film, categorie.nom_categorie FROM film
-                    JOIN film_categorie
-                    ON film.id_film = film_categorie.film_id
-                    JOIN categorie
-                    ON film_categorie.categorie_id = categorie.id_categorie
-                    WHERE categorie.id_categorie = ?
-                    """
+            sql = "SELECT film.titre_film FROM film JOIN film_client ON film.id_film = film_client.film_id JOIN client ON film_client.client_id = client.id_client WHERE client.id_client = ?"
             
             cursor.execute(sql,id)
             films = cursor.fetchall()
+            print(films)
             for i in films:
-                titre = i[1]
-                locations.append({
-                    'titre':titre,
-                    'categorie':i[2],
-                    'location':'categorieFilm/'+idcat+'/film/'+str(i[0])})
+                titre = i[0]
+                locations.append({'titre':titre})
+            print(locations)
         except sqlite3.Error as e:
             print("Erreur",e)
             connection.rollback()
@@ -154,45 +226,37 @@ class ClientFilmAll(Resource):
             connection.close()
             return(jsonify(locations))
 
-    @api.doc(body=filmpost, model=filmget)
-    def post(self,idcat):
+    @api.doc(body=film_clientpost, model=film_clientpost)
+    def post(self,idclient):
         """
-        Ajout d'un film dans la catégorie
+        Ajout d'une location de film pour un client
         """
-        film = {}
-        id = 0
-        intid = int(idcat)
+        filmclient={}
+        id_film=request.json['idFilm']
+        intid = int(idclient)
         if request.json :
             try:
                 connection = sqlite3.Connection("video1.db")
                 cursor = connection.cursor()
-                
-                cursor.execute("SELECT film.id_film FROM film")
-                id = len(cursor.fetchall())+1
-                
-                new_film = (id,request.json['titre'],
-                            request.json['acteur_film'],
-                            request.json['année réalisation'],
-                            request.json['durée'],
-                            request.json['resume_film'],
-                            request.json['age_min'])
 
-                cursor.execute('INSERT INTO film VALUES(?,?,?,?,?,?,?)',new_film)
-                #id = cursor.lastrowid
-                film_cat = (id,intid)
-                cursor.execute('INSERT INTO film_categorie VALUES (?,?)',film_cat)
+                idfilm=(id_film,)
+                cursor.execute('SELECT film.age_min FROM film WHERE film.id_film= ?', idfilm)
+                age_min= cursor.fetchone()
+
+                id=(intid,)
+                cursor.execute('SELECT client.age from client WHERE client.id_client = ?', id)
+                age_client=cursor.fetchone()
+
+                if age_client>=age_min:
+                    film_client = (id_film,intid)
+                    cursor.execute('INSERT INTO film_client VALUES (?,?)',film_client)
+                               
 
                 connection.commit()
 
-                film['titre']=request.json['titre']
-                film['acteur film']=request.json['acteur_film']
-                film['année réalisation']=request.json['année réalisation']
-                film['durée']=request.json['durée']
-                film['résumé film']=request.json['resume_film']
-                film['age minimum']=request.json['age_min']
+                filmclient['film']=request.json['film']
+                filmclient['client']=request.json['client']
                 
-            
-
             except Exception as e:
                 print("[Erreur]",e)
                 connection.rollback()
@@ -200,9 +264,9 @@ class ClientFilmAll(Resource):
             finally:
                 connection.close()
 
-            response = jsonify(film)
+            response = jsonify(filmclient)
             response.status_code = 201
-            response.headers['location'] = 'categorieFilm/'+idcat+'/film/'+str(id)
+            response.headers['location'] = 'clients/'+idclient+'/film/'+str(id_film)
             return response
 
         else:
